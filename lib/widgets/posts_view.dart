@@ -1,0 +1,136 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_icons/flutter_icons.dart';
+
+//import 'package:like_button/like_button.dart';
+import 'package:social_media_app/models/post.dart';
+import 'package:social_media_app/models/user.dart';
+import 'package:social_media_app/pages/profile.dart';
+import 'package:social_media_app/screens/comment.dart';
+import 'package:social_media_app/screens/view_image.dart';
+import 'package:social_media_app/utils/firebase.dart';
+import 'package:social_media_app/widgets/cached_image.dart';
+import 'package:timeago/timeago.dart' as timeago;
+
+class Posts extends StatefulWidget {
+  final PostModel post;
+
+  Posts({this.post});
+
+  @override
+  _PostsState createState() => _PostsState();
+}
+
+class _PostsState extends State<Posts> {
+  final DateTime timestamp = DateTime.now();
+
+  currentUserId() {
+    return firebaseAuth.currentUser.uid;
+  }
+
+  //UserModel user;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+            CupertinoPageRoute(builder: (_) => ViewImage(post: widget.post)));
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black12,
+          borderRadius: BorderRadius.circular(5.0),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            buildPostHeader(),
+            Container(
+              height: 320.0,
+              width: MediaQuery.of(context).size.width - 18.0,
+              child: cachedNetworkImage(widget.post.mediaUrl),
+            ),
+            Flexible(
+              child: ListTile(
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 10.0, vertical: 0.0),
+                title: Text(
+                  widget.post.description == null
+                      ? ""
+                      : widget.post.description,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.0),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Row(
+                    children: [
+                      Text(
+                        timeago.format(widget.post.timestamp.toDate()),
+                      ),
+                      SizedBox(width: 3.0),
+                      StreamBuilder(
+                        stream: likesRef
+                            .where('postId', isEqualTo: widget.post.postId)
+                            .snapshots(),
+                        builder:
+                            (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                          if (snapshot.hasData) {
+                            QuerySnapshot snap = snapshot.data;
+                            List<DocumentSnapshot> docs = snap.docs;
+                            return buildLikesCount(context, docs?.length ?? 0);
+                          } else {
+                            return buildLikesCount(context, 0);
+                          }
+                        },
+                      ),
+                      SizedBox(width: 5.0),
+                      StreamBuilder(
+                        stream: commentRef
+                            .doc(widget.post.postId)
+                            .collection("comments")
+                            .snapshots(),
+                        builder:
+                            (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                          if (snapshot.hasData) {
+                            QuerySnapshot snap = snapshot.data;
+                            List<DocumentSnapshot> docs = snap.docs;
+                            return buildCommentsCount(
+                                context, docs?.length ?? 0);
+                          } else {
+                            return buildCommentsCount(context, 0);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                trailing: Wrap(
+                  children: [
+                    buildLikeButton(),
+                    IconButton(
+                      icon: Icon(
+                        CupertinoIcons.chat_bubble,
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          CupertinoPageRoute(
+                            builder: (_) => Comments(post: widget.post),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  
+
