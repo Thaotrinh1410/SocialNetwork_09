@@ -155,3 +155,61 @@ class _PostsState extends State<Posts> {
     );
   }
 
+buildUserDp() {
+    return StreamBuilder(
+      stream: usersRef.doc(widget.post.ownerId).snapshots(),
+      builder: (context, AsyncSnapshot<DocumentSnapshot> snapshot) {
+        if (snapshot.hasData) {
+          UserModel user = UserModel.fromJson(snapshot.data.data());
+          return GestureDetector(
+            onTap: () => showProfile(context, profileId: user?.id),
+            child: CircleAvatar(
+              radius: 25.0,
+              backgroundImage: NetworkImage(user.photoUrl),
+            ),
+          );
+        }
+        return Container();
+      },
+    );
+  }
+
+  buildLikeButton() {
+    return StreamBuilder(
+      stream: likesRef
+          .where('postId', isEqualTo: widget.post.postId)
+          .where('userId', isEqualTo: currentUserId())
+          .snapshots(),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.hasData) {
+          List<QueryDocumentSnapshot> docs = snapshot?.data?.docs ?? [];
+          return IconButton(
+            onPressed: () {
+              if (docs.isEmpty) {
+                likesRef.add({
+                  'userId': currentUserId(),
+                  'postId': widget.post.postId,
+                  'dateCreated': Timestamp.now(),
+                });
+                addLikesToNotification();
+              } else {
+                likesRef.doc(docs[0].id).delete();
+                removeLikeFromNotification();
+              }
+            },
+            icon: docs.isEmpty
+                ? Icon(
+                    CupertinoIcons.heart,
+                  )
+                : Icon(
+                    CupertinoIcons.heart_fill,
+                    color: Colors.red,
+                  ),
+          );
+        }
+        return Container();
+      },
+    );
+  }
+
+
