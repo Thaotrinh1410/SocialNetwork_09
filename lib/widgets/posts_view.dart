@@ -250,3 +250,66 @@ addLikesToNotification() async {
               });
     }
   }
+handleDelete(BuildContext parentContext) {
+    //shows a simple dialog box
+    return showDialog(
+        context: parentContext,
+        builder: (context) {
+          return SimpleDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(5.0)),
+            children: [
+              SimpleDialogOption(
+                onPressed: () {
+                  Navigator.pop(context);
+                  deletePost();
+                },
+                child: Text('Delete Post'),
+              ),
+              Divider(),
+              SimpleDialogOption(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text('Cancel'),
+              ),
+            ],
+          );
+        });
+  }
+
+//you can only delete your own posts
+  deletePost() async {
+    postRef.doc(widget.post.id).delete();
+
+//delete notification associated with that given post
+    QuerySnapshot notificationsSnap = await notificationRef
+        .doc(widget.post.ownerId)
+        .collection('notifications')
+        .where('postId', isEqualTo: widget.post.postId)
+        .get();
+    notificationsSnap.docs.forEach((doc) {
+      if (doc.exists) {
+        doc.reference.delete();
+      }
+    });
+
+//delete all the comments associated with that given post
+    QuerySnapshot commentSnapshot =
+        await commentRef.doc(widget.post.postId).collection('comments').get();
+    commentSnapshot.docs.forEach((doc) {
+      if (doc.exists) {
+        doc.reference.delete();
+      }
+    });
+  }
+
+  showProfile(BuildContext context, {String profileId}) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (_) => Profile(profileId: profileId),
+      ),
+    );
+  }
+}
